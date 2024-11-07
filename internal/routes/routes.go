@@ -18,7 +18,6 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	router.GET("/devices", deviceController.ListDevices)
 	router.PUT("/devices/:id", deviceController.UpdateDevice)
 	router.DELETE("/devices/:id", deviceController.DeleteDevice)
-	router.GET("/devices/search", deviceController.SearchDevicesByBrand)
 
 	return router
 }

@@ -51,10 +51,23 @@ func (ctrl *DeviceController) GetDevice(c *gin.Context) {
 }
 
 // ListDevices: Lists all devices in the database
-func (ctrl *DeviceController) ListDevices(c *gin.Context) {
-	devices, err := ctrl.Repo.ListDevices()
+func (dc *DeviceController) ListDevices(c *gin.Context) {
+	// Get the brand query parameter if provided
+	brand := c.Query("brand")
+
+	var devices []*models.Device
+	var err error
+
+	if brand != "" {
+		// If brand is provided, search devices by brand
+		devices, err = dc.Repo.SearchDevicesByBrand(brand)
+	} else {
+		// If no brand is provided, get all devices
+		devices, err = dc.Repo.ListDevices()
+	}
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve devices"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -99,21 +112,4 @@ func (ctrl *DeviceController) DeleteDevice(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
-}
-
-// SearchDevicesByBrand: Searches for devices by their brand
-func (ctrl *DeviceController) SearchDevicesByBrand(c *gin.Context) {
-	brand := c.Query("brand")
-	if brand == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Brand parameter is required"})
-		return
-	}
-
-	devices, err := ctrl.Repo.SearchDevicesByBrand(brand)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve devices"})
-		return
-	}
-
-	c.JSON(http.StatusOK, devices)
 }
