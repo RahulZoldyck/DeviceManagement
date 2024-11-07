@@ -2,87 +2,66 @@ package repository
 
 import (
 	"device-management-api/internal/models"
-	"errors"
-	"sync"
-	"time"
+	"gorm.io/gorm"
 )
 
-var (
-	devices    = make(map[int]*models.Device)
-	idCounter  = 1
-	devicesMux sync.Mutex
-)
+type DeviceRepository struct {
+	DB *gorm.DB
+}
 
-func AddDevice(device *models.Device) (*models.Device, error) {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
+func NewDeviceRepository(db *gorm.DB) *DeviceRepository {
+	return &DeviceRepository{DB: db}
+}
 
-	device.ID = idCounter
-	device.CreatedAt = time.Now()
-	devices[idCounter] = device
-	idCounter++
-
+func (repo *DeviceRepository) AddDevice(device *models.Device) (*models.Device, error) {
+	if err := repo.DB.Create(device).Error; err != nil {
+		return nil, err
+	}
 	return device, nil
 }
-func GetDevice(id int) (*models.Device, error) {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
 
-	device, exists := devices[id]
-	if !exists {
-		return nil, errors.New("device not found")
+func (repo *DeviceRepository) GetDevice(id uint) (*models.Device, error) {
+	var device models.Device
+	if err := repo.DB.First(&device, id).Error; err != nil {
+		return nil, err
 	}
-
-	return device, nil
+	return &device, nil
 }
-func ListDevices() ([]*models.Device, error) {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
 
-	deviceList := make([]*models.Device, 0, len(devices))
-	for _, device := range devices {
-		deviceList = append(deviceList, device)
+func (repo *DeviceRepository) ListDevices() ([]*models.Device, error) {
+	var devices []*models.Device
+	if err := repo.DB.Find(&devices).Error; err != nil {
+		return nil, err
 	}
-
-	return deviceList, nil
+	return devices, nil
 }
-func UpdateDevice(id int, updatedDevice *models.Device) (*models.Device, error) {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
 
-	device, exists := devices[id]
-	if !exists {
-		return nil, errors.New("device not found")
+func (repo *DeviceRepository) UpdateDevice(id uint, updatedDevice *models.Device) (*models.Device, error) {
+	var device models.Device
+	if err := repo.DB.First(&device, id).Error; err != nil {
+		return nil, err
 	}
 
-	// Update device fields
 	device.Name = updatedDevice.Name
 	device.Brand = updatedDevice.Brand
-	device.CreatedAt = time.Now() // Or keep the original creation time if preferred
 
-	return device, nil
-}
-func DeleteDevice(id int) error {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
-
-	if _, exists := devices[id]; !exists {
-		return errors.New("device not found")
+	if err := repo.DB.Save(&device).Error; err != nil {
+		return nil, err
 	}
+	return &device, nil
+}
 
-	delete(devices, id)
+func (repo *DeviceRepository) DeleteDevice(id uint) error {
+	if err := repo.DB.Delete(&models.Device{}, id).Error; err != nil {
+		return err
+	}
 	return nil
 }
-func SearchDevicesByBrand(brand string) ([]*models.Device, error) {
-	devicesMux.Lock()
-	defer devicesMux.Unlock()
 
-	var result []*models.Device
-	for _, device := range devices {
-		if device.Brand == brand {
-			result = append(result, device)
-		}
+func (repo *DeviceRepository) SearchDevicesByBrand(brand string) ([]*models.Device, error) {
+	var devices []*models.Device
+	if err := repo.DB.Where("brand = ?", brand).Find(&devices).Error; err != nil {
+		return nil, err
 	}
-
-	return result, nil
+	return devices, nil
 }

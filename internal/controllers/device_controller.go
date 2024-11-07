@@ -2,34 +2,46 @@ package controllers
 
 import (
 	"device-management-api/internal/models"
-	"device-management-api/internal/services"
+	"device-management-api/internal/repository"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
-func AddDevice(c *gin.Context) {
+type DeviceController struct {
+	Repo *repository.DeviceRepository
+}
+
+func NewDeviceController(repo *repository.DeviceRepository) *DeviceController {
+	return &DeviceController{Repo: repo}
+}
+
+// AddDevice: Adds a new device to the database
+func (ctrl *DeviceController) AddDevice(c *gin.Context) {
 	var device models.Device
-	if err := c.BindJSON(&device); err != nil {
+	if err := c.ShouldBindJSON(&device); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	newDevice, err := services.AddDevice(&device)
+
+	newDevice, err := ctrl.Repo.AddDevice(&device)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create device"})
 		return
 	}
+
 	c.JSON(http.StatusCreated, newDevice)
 }
 
-func GetDevice(c *gin.Context) {
+// GetDevice: Retrieves a device by its ID
+func (ctrl *DeviceController) GetDevice(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
-	device, err := services.GetDevice(id)
+	device, err := ctrl.Repo.GetDevice(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
 		return
@@ -38,8 +50,9 @@ func GetDevice(c *gin.Context) {
 	c.JSON(http.StatusOK, device)
 }
 
-func ListDevices(c *gin.Context) {
-	devices, err := services.ListDevices()
+// ListDevices: Lists all devices in the database
+func (ctrl *DeviceController) ListDevices(c *gin.Context) {
+	devices, err := ctrl.Repo.ListDevices()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve devices"})
 		return
@@ -48,7 +61,8 @@ func ListDevices(c *gin.Context) {
 	c.JSON(http.StatusOK, devices)
 }
 
-func UpdateDevice(c *gin.Context) {
+// UpdateDevice: Updates an existing device by its ID
+func (ctrl *DeviceController) UpdateDevice(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
@@ -56,12 +70,12 @@ func UpdateDevice(c *gin.Context) {
 	}
 
 	var updatedDevice models.Device
-	if err := c.BindJSON(&updatedDevice); err != nil {
+	if err := c.ShouldBindJSON(&updatedDevice); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
 
-	device, err := services.UpdateDevice(id, &updatedDevice)
+	device, err := ctrl.Repo.UpdateDevice(uint(id), &updatedDevice)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
 		return
@@ -70,14 +84,15 @@ func UpdateDevice(c *gin.Context) {
 	c.JSON(http.StatusOK, device)
 }
 
-func DeleteDevice(c *gin.Context) {
+// DeleteDevice: Deletes a device by its ID
+func (ctrl *DeviceController) DeleteDevice(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid device ID"})
 		return
 	}
 
-	err = services.DeleteDevice(id)
+	err = ctrl.Repo.DeleteDevice(uint(id))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
 		return
@@ -86,14 +101,15 @@ func DeleteDevice(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
-func SearchDevicesByBrand(c *gin.Context) {
+// SearchDevicesByBrand: Searches for devices by their brand
+func (ctrl *DeviceController) SearchDevicesByBrand(c *gin.Context) {
 	brand := c.Query("brand")
 	if brand == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Brand parameter is required"})
 		return
 	}
 
-	devices, err := services.SearchDevicesByBrand(brand)
+	devices, err := ctrl.Repo.SearchDevicesByBrand(brand)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not retrieve devices"})
 		return
@@ -101,5 +117,3 @@ func SearchDevicesByBrand(c *gin.Context) {
 
 	c.JSON(http.StatusOK, devices)
 }
-
-// Implement other handlers (Get, Update, Delete, Search by brand, etc.)

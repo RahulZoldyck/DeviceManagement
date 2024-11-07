@@ -26,7 +26,7 @@ func LoadConfig() *Config {
 	AppConfig = &Config{
 		Port:   getEnv("PORT", "8080"),
 		DBHost: getEnv("DB_HOST", "localhost"),
-		DBPort: getEnv("DB_PORT", "5432"),
+		DBPort: getEnv("DB_PORT", "3306"), // Changed to MySQL default port
 		DBUser: getEnv("DB_USER", ""),
 		DBPass: getEnv("DB_PASSWORD", ""),
 		DBName: getEnv("DB_NAME", ""),
